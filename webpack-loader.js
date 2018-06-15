@@ -1,12 +1,32 @@
-const I18nliner = require('i18nliner').default;
-const hasTranslatableText = require('react-i18nliner/hasTranslatableText')(I18nliner.config);
-const preprocess = require('react-i18nliner/preprocess');
+var I18nliner = require("i18nliner").default;
+var config = I18nliner.config;
+var preprocess = require("./preprocess");
+var hasTranslatableText = require("./hasTranslatableText")(config);
 
-module.exports = function i18nloader(source) {
+/*
+ * there's code in this file that dynamically requires plugins; it's
+ * not needed in the browser, so we skip it ... otherwise webpack
+ * will load *all* of i18nliner (which includes things like fs, and
+ * will fail).
+ */
+var noParsePath = "i18nliner/dist/lib/i18nliner";
+var addNoParse = function () {
+  var escapeRegExp = require("./util/escapeRegExp");
+  var path = require("path");
+  var mod = this.options.module || {};
+
+  mod.noParse = mod.noParse || [];
+  if (!Array.isArray(mod.noParse))
+    mod.noParse = [mod.noParse];
+  mod.noParse.push(new RegExp(escapeRegExp(path.normalize(noParsePath))));
+
+  addNoParse = Function.prototype;
+};
+
+module.exports = function (source) {
   this.cacheable();
-
-  if (hasTranslatableText(source)) {
-    return preprocess(source, I18nliner.config);
-  }
+  addNoParse.call(this);
+  if (hasTranslatableText(source))
+    source = preprocess(source, config);
   return source;
 };
